@@ -1,0 +1,42 @@
+name: Build and Notify via Telegram
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: temurin
+        java-version: 17
+
+    - name: Set up Android SDK
+      uses: android-actions/setup-android@v2
+
+    - name: Build APK
+      run: |
+        ./gradlew assembleDebug > build.log || true
+
+    - name: Send APK if success
+      if: success()
+      run: |
+        curl -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+             -F document=@app/build/outputs/apk/debug/app-debug.apk \
+             https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument
+
+    - name: Send filtered error log if failed
+      if: failure()
+      run: |
+        grep -E 'FAILURE:|What went wrong:|Execution failed|Caused by:|Exception|BUILD FAILED' build.log > err.txt
+        curl -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+             -F document=@err.txt \
+             https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument
