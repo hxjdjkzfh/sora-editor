@@ -9,19 +9,29 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v3
         with:
+          java-version: '17'
           distribution: 'temurin'
-          java-version: 17
+
+      - name: Grant permission for gradlew
+        run: chmod +x ./gradlew
 
       - name: Build language-textmate AAR
         run: ./gradlew :language-textmate:assembleRelease
 
-      - name: Send to Telegram
+      - name: Upload AAR artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: language-textmate-release.aar
+          path: language-textmate/build/outputs/aar/language-textmate-release.aar
+
+      - name: Send AAR to Telegram
+        if: success()
         run: |
-          curl -F document=@language-textmate/build/outputs/aar/language-textmate-release.aar \
-               -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          curl -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+               -F document=@language-textmate/build/outputs/aar/language-textmate-release.aar \
                "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument"
