@@ -8,30 +8,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
-          java-version: '17'
           distribution: 'temurin'
-
-      - name: Grant permission for gradlew
-        run: chmod +x ./gradlew
+          java-version: 17
 
       - name: Build language-textmate AAR
         run: ./gradlew :language-textmate:assembleRelease
 
       - name: Upload AAR artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: language-textmate-release.aar
           path: language-textmate/build/outputs/aar/language-textmate-release.aar
 
       - name: Send AAR to Telegram
-        if: success()
+        if: ${{ success() }}
         run: |
-          curl -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
-               -F document=@language-textmate/build/outputs/aar/language-textmate-release.aar \
+          curl -F document=@language-textmate/build/outputs/aar/language-textmate-release.aar \
+               -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
                "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument"
