@@ -7,7 +7,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,10 +15,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: 17
-
-      - name: Grant execute permission
-        run: chmod +x ./gradlew
+          java-version: '17'
 
       - name: Build AAR
         run: ./gradlew :language-textmate:assembleRelease
@@ -29,10 +25,16 @@ jobs:
         with:
           name: language-textmate-release.aar
           path: language-textmate/build/outputs/aar/language-textmate-release.aar
+          if-no-files-found: warn
 
-      - name: Send to Telegram
-        if: success()
+      - name: Send AAR to Telegram
         run: |
-          curl -F chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
-               -F document=@language-textmate/build/outputs/aar/language-textmate-release.aar \
-               "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument"
+          if [ -f language-textmate/build/outputs/aar/language-textmate-release.aar ]; then
+            curl -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                 -F document=@language-textmate/build/outputs/aar/language-textmate-release.aar \
+                 "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument"
+          else
+            curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+                 -d chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+                 --data-urlencode "text=❌ AAR файл не найден. Возможно, сборка провалилась."
+          fi
