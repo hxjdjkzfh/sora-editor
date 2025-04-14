@@ -1,6 +1,7 @@
 name: Build and Send AAR to Telegram
 
 on:
+  push:
   workflow_dispatch:
 
 jobs:
@@ -8,26 +9,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up JDK
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Build language-textmate AAR
+      - name: Grant execute permission
+        run: chmod +x ./gradlew
+
+      - name: Build AAR
         run: ./gradlew :language-textmate:assembleRelease
 
-      - name: Upload AAR artifact
+      - name: Upload AAR Artifact
         uses: actions/upload-artifact@v4
         with:
           name: language-textmate-release.aar
           path: language-textmate/build/outputs/aar/language-textmate-release.aar
 
-      - name: Send AAR to Telegram
-        if: ${{ success() }}
+      - name: Send to Telegram
+        if: success()
         run: |
-          curl -F document=@language-textmate/build/outputs/aar/language-textmate-release.aar \
-               -F chat_id="${{ secrets.TELEGRAM_CHAT_ID }}" \
+          curl -F chat_id=${{ secrets.TELEGRAM_CHAT_ID }} \
+               -F document=@language-textmate/build/outputs/aar/language-textmate-release.aar \
                "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendDocument"
